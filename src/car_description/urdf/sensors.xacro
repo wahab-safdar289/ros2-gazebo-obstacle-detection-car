@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Sensor masses (small, so they barely affect the chassis dynamics) -->
+  <xacro:property name="camera_mass" value="0.05"/>
+  <xacro:property name="lidar_mass"  value="0.10"/>
+  <xacro:property name="mast_mass"   value="0.02"/>
+  <xacro:property name="mast_radius" value="0.008"/>
+  <!-- Mast sits behind the camera box but still under the lidar disc -->
+  <xacro:property name="mast_x_offset" value="-0.01"/>
+  <!-- Mast runs from the chassis top up to the bottom of the lidar -->
+  <xacro:property name="mast_length"
+                  value="${lidar_z_offset - lidar_height / 2.0 - chassis_top_z}"/>
+
+  <xacro:macro name="car_sensors">
+
+    <!-- ================= Camera ================= -->
+    <link name="camera_link">
+      <visual>
+        <geometry>
+          <box size="${camera_size_x} ${camera_size_y} ${camera_size_z}"/>
+        </geometry>
+        <material name="camera_red">
+          <color rgba="0.8 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${camera_size_x} ${camera_size_y} ${camera_size_z}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${camera_mass}"/>
+        <inertia ixx="${(camera_mass / 12.0) * (camera_size_y * camera_size_y + camera_size_z * camera_size_z)}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(camera_mass / 12.0) * (camera_size_x * camera_size_x + camera_size_z * camera_size_z)}"
+                 iyz="0.0"
+                 izz="${(camera_mass / 12.0) * (camera_size_x * camera_size_x + camera_size_y * camera_size_y)}"/>
+      </inertial>
+    </link>
+
+    <!-- camera_joint: 1.5 cm ahead of base_link -->
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="${camera_x_offset} ${camera_y_offset} ${camera_z_offset}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Optical frame (z forward, x right, y down) on the front face of the camera box.
+         Used as the frame_id of the image, so RViz and TF agree with ROS conventions. -->
+    <link name="camera_optical_link"/>
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_optical_link"/>
+      <origin xyz="${camera_size_x / 2.0} 0 0" rpy="${-pi / 2.0} 0 ${-pi / 2.0}"/>
+    </joint>
+
+    <!-- ================= Lidar mast ================= -->
+    <link name="lidar_mast_link">
+      <visual>
+        <origin xyz="0 0 ${mast_length / 2.0}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${mast_radius}" length="${mast_length}"/>
+        </geometry>
+        <material name="mast_grey">
+          <color rgba="0.4 0.4 0.4 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${mast_length / 2.0}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${mast_radius}" length="${mast_length}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 ${mast_length / 2.0}" rpy="0 0 0"/>
+        <mass value="${mast_mass}"/>
+        <inertia ixx="${mast_mass * (3.0 * mast_radius * mast_radius + mast_length * mast_length) / 12.0}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${mast_mass * (3.0 * mast_radius * mast_radius + mast_length * mast_length) / 12.0}"
+                 iyz="0.0"
+                 izz="${mast_mass * mast_radius * mast_radius / 2.0}"/>
+      </inertial>
+    </link>
+
+    <joint name="lidar_mast_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="lidar_mast_link"/>
+      <origin xyz="${mast_x_offset} 0 ${chassis_top_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ================= Lidar ================= -->
+    <link name="lidar_link">
+      <visual>
+        <geometry>
+          <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+        </geometry>
+        <material name="lidar_black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${lidar_mass}"/>
+        <inertia ixx="${lidar_mass * (3.0 * lidar_radius * lidar_radius + lidar_height * lidar_height) / 12.0}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${lidar_mass * (3.0 * lidar_radius * lidar_radius + lidar_height * lidar_height) / 12.0}"
+                 iyz="0.0"
+                 izz="${lidar_mass * lidar_radius * lidar_radius / 2.0}"/>
+      </inertial>
+    </link>
+
+    <!-- lidar_joint: 0.5 cm ahead of base_link. The link origin is the scan plane. -->
+    <joint name="lidar_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="lidar_link"/>
+      <origin xyz="${lidar_x_offset} ${lidar_y_offset} ${lidar_z_offset}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ================= Gazebo sensor: lidar ================= -->
+    <gazebo reference="lidar_link">
+      <sensor name="lidar" type="gpu_lidar">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>${lidar_topic}</topic>
+        <frame_id>lidar_link</frame_id>
+        <update_rate>${lidar_update_rate}</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>${lidar_samples}</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>1</samples>
+              <resolution>1</resolution>
+              <min_angle>0.0</min_angle>
+              <max_angle>0.0</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>${lidar_min_range}</min>
+            <max>${lidar_max_range}</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </lidar>
+      </sensor>
+    </gazebo>
+
+    <!-- ================= Gazebo sensor: camera ================= -->
+    <gazebo reference="camera_link">
+      <sensor name="camera" type="camera">
+        <!-- Start the view at the front face of the camera box -->
+        <pose>${camera_size_x / 2.0} 0 0 0 0 0</pose>
+        <topic>${camera_topic}</topic>
+        <frame_id>camera_optical_link</frame_id>
+        <update_rate>${camera_update_rate}</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <horizontal_fov>${camera_hfov}</horizontal_fov>
+          <image>
+            <width>${camera_width_px}</width>
+            <height>${camera_height_px}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>20.0</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="car">
+
+  <!-- ============ Includes ============ -->
+  <xacro:include filename="car_properties.xacro"/>
+  <xacro:include filename="wheel.xacro"/>
+  <xacro:include filename="car.ros2_control.xacro"/>
+  <xacro:include filename="sensors.xacro"/>
+
+
+  <!-- ============ Helper: box inertia ============ -->
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertial>
+      <origin xyz="0 0 ${chassis_z_offset}" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(m / 12.0) * (y * y + z * z)}" ixy="0.0" ixz="0.0"
+               iyy="${(m / 12.0) * (x * x + z * z)}" iyz="0.0"
+               izz="${(m / 12.0) * (x * x + y * y)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ============ Base footprint (ground reference) ============ -->
+  <link name="base_footprint"/>
+
+  <!-- ============ Base link (chassis) ============ -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${chassis_z_offset}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="chassis_blue">
+        <color rgba="0.1 0.3 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${chassis_z_offset}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertia m="${chassis_mass}"
+                       x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
+  </link>
+
+  <!-- Lifts base_link so the wheels (centered at z=0 in base_link) touch the ground -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============ Four wheels ============ -->
+  <xacro:wheel name="front_left"  x="${wheel_x_offset}"  y="${wheel_y_offset}"/>
+  <xacro:wheel name="front_right" x="${wheel_x_offset}"  y="${-wheel_y_offset}"/>
+  <xacro:wheel name="rear_left"   x="${-wheel_x_offset}" y="${wheel_y_offset}"/>
+  <xacro:wheel name="rear_right"  x="${-wheel_x_offset}" y="${-wheel_y_offset}"/>
+
+  <!-- ============ ros2_control (gz_ros2_control hardware interface) ============ -->
+  <xacro:car_ros2_control/>
+
+  <!-- ============ Sensors (added later via sensors.xacro) ============ -->
+  <xacro:car_sensors/> 
+
+</robot>

@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- All units are SI: meters, kilograms, radians, seconds -->
+
+  <!-- ============ Chassis ============ -->
+  <xacro:property name="chassis_length"    value="0.30"/>
+  <xacro:property name="chassis_width"     value="0.18"/>
+  <xacro:property name="chassis_height"    value="0.08"/>
+  <xacro:property name="chassis_mass"      value="2.0"/>
+  <xacro:property name="ground_clearance"  value="0.02"/>
+
+  <!-- base_link origin is at wheel-axle height, so the ground is at z = -wheel_radius.
+       The chassis center is therefore: -wheel_radius + clearance + height/2 = 0.01 -->
+  <xacro:property name="chassis_z_offset"
+                  value="${-wheel_radius + ground_clearance + chassis_height / 2.0}"/>
+
+  <!-- ============ Wheels ============ -->
+  <xacro:property name="wheel_radius"      value="0.05"/>
+  <xacro:property name="wheel_width"       value="0.04"/>
+  <xacro:property name="wheel_mass"        value="0.2"/>
+  <xacro:property name="wheel_friction"    value="1.0"/>
+
+  <!-- Wheel positions relative to base_link -->
+  <xacro:property name="wheel_x_offset"    value="0.10"/>
+  <!-- chassis half-width + wheel half-width + 5 mm gap -->
+  <xacro:property name="wheel_y_offset"
+                  value="${chassis_width / 2.0 + wheel_width / 2.0 + 0.005}"/>
+
+  <!-- ============ Sensor mounting (used later by sensors.xacro) ============ -->
+  <!-- Top surface of the chassis in base_link frame -->
+  <xacro:property name="chassis_top_z"
+                  value="${chassis_z_offset + chassis_height / 2.0}"/>
+
+  <!-- Camera: 1.5 cm ahead of base_link -->
+  <xacro:property name="camera_x_offset"   value="0.015"/>
+  <xacro:property name="camera_y_offset"   value="0.0"/>
+  <xacro:property name="camera_size_x"     value="0.02"/>
+  <xacro:property name="camera_size_y"     value="0.06"/>
+  <xacro:property name="camera_size_z"     value="0.03"/>
+  <xacro:property name="camera_z_offset"
+                  value="${chassis_top_z + camera_size_z / 2.0}"/>
+  <xacro:property name="camera_width_px"   value="320"/>
+  <xacro:property name="camera_height_px"  value="240"/>
+  <xacro:property name="camera_hfov"       value="1.047"/>
+  <xacro:property name="camera_update_rate" value="10"/>
+
+  <!-- Lidar: 0.5 cm ahead of base_link -->
+  <xacro:property name="lidar_x_offset"    value="0.005"/>
+  <xacro:property name="lidar_y_offset"    value="0.0"/>
+  <!-- Mounted higher than the camera top so the scan plane is not blocked by it.
+       Camera top is at chassis_top_z + 0.03; scan plane is 2 cm above that. -->
+  <xacro:property name="lidar_z_offset"
+                  value="${chassis_top_z + camera_size_z + 0.02}"/>
+  <xacro:property name="lidar_radius"      value="0.03"/>
+  <xacro:property name="lidar_height"      value="0.04"/>
+  <xacro:property name="lidar_samples"     value="360"/>
+  <xacro:property name="lidar_min_range"   value="0.12"/>
+  <xacro:property name="lidar_max_range"   value="8.0"/>
+  <xacro:property name="lidar_update_rate" value="10"/>
+
+  <!-- ============ Topic names (shared with gz_bridge.yaml) ============ -->
+  <xacro:property name="lidar_topic"       value="scan"/>
+  <xacro:property name="camera_topic"      value="camera/image_raw"/>
+
+</robot>
